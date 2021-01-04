@@ -22,5 +22,6 @@ namespace AccessControl.Services
         event EventHandler<bool> OnNfcTagTextWriten;
         event EventHandler<bool> OnNfcTagUriWriten;
         event EventHandler<bool> OnNfcTagMimeWriten;
+        event EventHandler<bool> OnNfcTagCleaned;
     }
 }

@@ -43,6 +43,7 @@ namespace AccessControl.Droid.Services
         public event EventHandler<bool> OnNfcTagTextWriten;
         public event EventHandler<bool> OnNfcTagUriWriten;
         public event EventHandler<bool> OnNfcTagMimeWriten;
+        public event EventHandler<bool> OnNfcTagCleaned;
         public event EventHandler OnNfcTagDiscovered;
 
         internal static void OnNewIntent(Intent intent)
@@ -155,6 +156,8 @@ namespace AccessControl.Droid.Services
                 ManageWriteUriOperation();
             if (isWritingMime)
                 ManageWriteMimeOperation();
+            if (isCleaning)
+                ManageCleanOperation();
         }
 
         private void ManageDiscoverOperation()
@@ -260,6 +263,56 @@ namespace AccessControl.Droid.Services
             }
 
             return false;
+        }
+
+        private void ManageCleanOperation()
+        {
+            Ndef ndef = null;
+            NfcNdefRecord record = null;
+            try
+            {
+                ndef = Ndef.Get(currentTag);
+                if (!CheckWriteOperation(ndef, record))
+                {
+                    OnNfcTagCleaned?.Invoke(this, false);
+                    return;
+                }
+
+                ndef.Connect();
+
+                byte[] empty = Array.Empty<byte>();
+                NdefMessage message = new NdefMessage(new NdefRecord[1] { new NdefRecord(NdefRecord.TnfEmpty, empty, empty, empty) });
+
+                ndef.WriteNdefMessage(message);
+                OnNfcTagCleaned?.Invoke(this, true);
+                return;
+            }
+            catch (Android.Nfc.TagLostException tlex)
+            {
+                Debug.WriteLine($"Tag Lost Error: {tlex.Message}");
+            }
+            catch (Java.IO.IOException ioex)
+            {
+                Debug.WriteLine($"Tag IO Error: {ioex.Message}");
+            }
+            catch (Android.Nfc.FormatException fe)
+            {
+                Debug.WriteLine($"Tag Format Error: {fe.Message}");
+            }
+            catch
+            {
+                Debug.WriteLine($"Tag Error");
+            }
+            finally
+            {
+                if (ndef?.IsConnected == true)
+                    ndef.Close();
+
+                currentTag = null;
+                currentItent = null;
+            }
+
+            OnNfcTagCleaned?.Invoke(this, false);
         }
 
         private bool CheckWriteOperation(Ndef ndef, NfcNdefRecord record)

@@ -19,6 +19,7 @@ namespace AccessControl.Features
             nfcService.OnNfcTagTextWriten += NfcService_OnNfcTagTextWriten;
             nfcService.OnNfcTagUriWriten += NfcService_OnNfcTagUriWriten;
             nfcService.OnNfcTagMimeWriten += NfcService_OnNfcTagMimeWriten;
+            nfcService.OnNfcTagCleaned += NfcService_OnNfcTagCleaned;
 
             InitializeComponent();
         }
@@ -112,6 +113,20 @@ namespace AccessControl.Features
             nfcService.StopWritingMime();
             btnWriteMime.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "MIME writen on NFC card" : "Error writing MIME on NFC card");
+        }
+
+        private void btnClean_Clicked(System.Object sender, System.EventArgs e)
+        {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Cleaning NFC card...");
+            btnClean.IsEnabled = false;
+            nfcService.Clean();
+        }
+
+        private void NfcService_OnNfcTagCleaned(object sender, bool cleaned)
+        {
+            nfcService.StopCleaning();
+            btnClean.IsEnabled = true;
+            Device.BeginInvokeOnMainThread(() => lbState.Text = cleaned ? "NFC card cleaned" : "Error cleaning NFC card");
         }
     }
 }
