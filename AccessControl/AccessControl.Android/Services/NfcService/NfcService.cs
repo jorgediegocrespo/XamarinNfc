@@ -136,9 +136,15 @@ namespace AccessControl.Droid.Services
 
             NfcTagInfo nTag = GetNfcTagInfo(currentTag);
             if (isDiscovering)
+            {
                 OnNfcTagDiscovered?.Invoke(this, null);
+                currentItent = null;
+            }
             if (isReading)
+            {
                 OnNfcTagRead?.Invoke(this, nTag);
+                currentItent = null;
+            }
             
 
             //if (isWriting)

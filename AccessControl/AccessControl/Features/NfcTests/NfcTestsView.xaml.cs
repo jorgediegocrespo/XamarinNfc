@@ -1,4 +1,8 @@
-﻿using AccessControl.Services;
+﻿using System;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using AccessControl.Services;
 using Xamarin.Forms;
 
 namespace AccessControl.Features
@@ -10,45 +14,59 @@ namespace AccessControl.Features
         public NfcTestsView()
         {
             nfcService = DependencyService.Get<INfcService>();
-            InitializeComponent();
-        }
-
-        protected override void OnAppearing()
-        {
-            base.OnAppearing();
-
             nfcService.OnNfcTagDiscovered += NfcService_OnNfcTagDiscovered;
             nfcService.OnNfcTagRead += NfcService_OnNfcTagRead;
 
-            nfcService.StartDiscovering();
-            lbState.Text = "Discovering...";
+            InitializeComponent();
         }
 
-        protected override void OnDisappearing()
+        private void btnDiscover_Clicked(System.Object sender, System.EventArgs e)
         {
-            nfcService.OnNfcTagDiscovered -= NfcService_OnNfcTagDiscovered;
-            nfcService.OnNfcTagRead -= NfcService_OnNfcTagRead;
-
-            nfcService.StopDiscovering();
-            lbState.Text = "Waiting...";
-
-            base.OnDisappearing();            
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Discovering...");
+            btnDiscover.IsEnabled = false;
+            nfcService.StartDiscovering();
         }
-
+        
         private void NfcService_OnNfcTagDiscovered(object sender, System.EventArgs e)
         {
+            nfcService.StopDiscovering();
+            btnDiscover.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card discovered");
-            btnRead.IsEnabled = true;
-        }
-
-        private void NfcService_OnNfcTagRead(object sender, NfcTagInfo e)
-        {
-            Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card read");
         }
 
         private void btnRead_Clicked(System.Object sender, System.EventArgs e)
         {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Reading...");
+            btnRead.IsEnabled = false;
             nfcService.Read();
+        }
+
+        private async void NfcService_OnNfcTagRead(object sender, NfcTagInfo e)
+        {
+            nfcService.StopReading();
+            btnRead.IsEnabled = true;
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card read");
+            await ShowNfcMessage(e.Records.FirstOrDefault());
+        }
+
+        private async Task ShowNfcMessage(NfcNdefRecord record)
+        {
+            if (record == null)
+                return;
+
+            string message = $"Message: {record.Message}";
+            message += Environment.NewLine;
+            message += $"RawMessage: {Encoding.UTF8.GetString(record.Payload)}";
+            message += Environment.NewLine;
+            message += $"Type: {record.TypeFormat}";
+
+            if (!string.IsNullOrWhiteSpace(record.MimeType))
+            {
+                message += Environment.NewLine;
+                message += $"MimeType: {record.MimeType}";
+            }
+
+            await DisplayAlert("NFC card read", message, "Ok");
         }
     }
 }

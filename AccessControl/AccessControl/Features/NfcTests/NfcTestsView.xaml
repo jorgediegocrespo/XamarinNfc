@@ -8,7 +8,8 @@
             <Label Text="Nfc tests" HorizontalTextAlignment="Center" TextColor="White" FontSize="36"/>
         </Frame>
 
-        <Button x:Name="btnRead" Text="Read NFC" IsEnabled="False" Clicked="btnRead_Clicked" Margin="20,0"/>
+        <Button x:Name="btnDiscover" Text="Discover card" Clicked="btnDiscover_Clicked" Margin="20,0"/>
+        <Button x:Name="btnRead" Text="Read NFC" Clicked="btnRead_Clicked" Margin="20,0"/>
         <Label x:Name="lbState" Text="Waiting..." HorizontalTextAlignment="Center"/>
     </StackLayout>
 
