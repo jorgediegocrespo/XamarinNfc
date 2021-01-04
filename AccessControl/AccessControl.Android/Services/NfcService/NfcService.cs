@@ -22,9 +22,13 @@ namespace AccessControl.Droid.Services
         private bool isDiscovering;
         private bool isReading;
         private bool isWritingText;
+        private bool isWritingUri;
+        private bool isWritingMime;
         private bool isCleaning;
 
         private string textToWrite;
+        private string uriToWrite;
+        private string mimeToWrite;
 
         private Tag currentTag;
         private Intent currentItent;
@@ -37,6 +41,8 @@ namespace AccessControl.Droid.Services
 
         public event EventHandler<NfcTagInfo> OnNfcTagRead;
         public event EventHandler<bool> OnNfcTagTextWriten;
+        public event EventHandler<bool> OnNfcTagUriWriten;
+        public event EventHandler<bool> OnNfcTagMimeWriten;
         public event EventHandler OnNfcTagDiscovered;
 
         internal static void OnNewIntent(Intent intent)
@@ -63,6 +69,20 @@ namespace AccessControl.Droid.Services
             ManageCurrentOperation();
         }
 
+        public void WriteUri(string uri)
+        {
+            uriToWrite = uri;
+            isWritingUri = true;
+            ManageCurrentOperation();
+        }
+
+        public void WriteMime(string mime)
+        {
+            mimeToWrite = mime;
+            isWritingMime = true;
+            ManageCurrentOperation();
+        }
+
         public void Clean()
         {
             isCleaning = true;
@@ -72,6 +92,8 @@ namespace AccessControl.Droid.Services
         public void StopDiscovering() => isDiscovering = false;
         public void StopReading() => isReading = false;
         public void StopWritingText() => isWritingText = false;
+        public void StopWritingUri() => isWritingUri = false;
+        public void StopWritingMime() => isWritingMime = false;
         public void StopCleaning() => isCleaning = false;
 
         private void ManageCurrentOperation()
@@ -129,6 +151,10 @@ namespace AccessControl.Droid.Services
                 ManageReadOperation();
             if (isWritingText)
                 ManageWriteTextOperation();
+            if (isWritingUri)
+                ManageWriteUriOperation();
+            if (isWritingMime)
+                ManageWriteMimeOperation();
         }
 
         private void ManageDiscoverOperation()
@@ -147,23 +173,50 @@ namespace AccessControl.Droid.Services
 
         private void ManageWriteTextOperation()
         {
+            NfcNdefRecord record = new NfcNdefRecord
+            {
+                TypeFormat = NfcNdefTypeFormat.WellKnown,
+                MimeType = "application/com.companyname.accesscontrol",
+                Payload = NfcUtils.EncodeToByteArray(textToWrite),
+            };
+
+            OnNfcTagTextWriten?.Invoke(this, WriteNfcNdefRecord(record));
+        }
+
+        private void ManageWriteUriOperation()
+        {
+            NfcNdefRecord record = new NfcNdefRecord
+            {
+                TypeFormat = NfcNdefTypeFormat.Uri,
+                Payload = NfcUtils.EncodeToByteArray(uriToWrite)
+            };
+
+            OnNfcTagUriWriten?.Invoke(this, WriteNfcNdefRecord(record));
+        }
+
+        private void ManageWriteMimeOperation()
+        {
+            NfcNdefRecord record = new NfcNdefRecord
+            {
+                TypeFormat = NfcNdefTypeFormat.Mime,
+                MimeType = "application/com.companyname.accesscontrol",
+                Payload = NfcUtils.EncodeToByteArray(mimeToWrite)
+            };
+
+            OnNfcTagMimeWriten?.Invoke(this, WriteNfcNdefRecord(record));
+        }
+
+        private bool WriteNfcNdefRecord(NfcNdefRecord record)
+        {
             Ndef ndef = null;
-            bool writen = false;
             try
             {
-                NfcNdefRecord record = new NfcNdefRecord
-                {
-                    TypeFormat = NfcNdefTypeFormat.WellKnown,
-                    MimeType = "application/com.companyname.accesscontrol",
-                    Payload = NfcUtils.EncodeToByteArray(textToWrite),
-                };
-
                 ndef = Ndef.Get(currentTag);
                 if (!CheckWriteOperation(ndef, record))
-                    return;
+                    return false;
 
                 ndef.Connect();
-                    
+
                 NdefMessage message = null;
                 List<NdefRecord> records = new List<NdefRecord>();
                 if (GetAndroidNdefRecord(record) is NdefRecord ndefRecord)
@@ -175,27 +228,27 @@ namespace AccessControl.Droid.Services
                 if (message == null)
                 {
                     Debug.WriteLine("NFC tag can not be writen with null message");
-                    return;
+                    return false;
                 }
-                                        
+
                 ndef.WriteNdefMessage(message);
-                writen = true;
+                return true;
             }
             catch (Android.Nfc.TagLostException tlex)
             {
-                throw new Exception("Tag Lost Error: " + tlex.Message);
+                Debug.WriteLine($"Tag Lost Error: {tlex.Message}");
             }
             catch (Java.IO.IOException ioex)
             {
-                throw new Exception("Tag IO Error: " + ioex.Message);
+                Debug.WriteLine($"Tag IO Error: {ioex.Message}");
             }
             catch (Android.Nfc.FormatException fe)
             {
-                throw new Exception("Tag Format Error: " + fe.Message);
+                Debug.WriteLine($"Tag Format Error: {fe.Message}");
             }
-            catch (Exception ex)
+            catch
             {
-                throw new Exception("Tag Error:" + ex.Message);
+                Debug.WriteLine($"Tag Error");
             }
             finally
             {
@@ -204,8 +257,9 @@ namespace AccessControl.Droid.Services
 
                 currentTag = null;
                 currentItent = null;
-                OnNfcTagTextWriten?.Invoke(this, writen);
             }
+
+            return false;
         }
 
         private bool CheckWriteOperation(Ndef ndef, NfcNdefRecord record)

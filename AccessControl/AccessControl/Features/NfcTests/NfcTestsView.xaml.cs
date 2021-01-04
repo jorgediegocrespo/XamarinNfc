@@ -17,6 +17,8 @@ namespace AccessControl.Features
             nfcService.OnNfcTagDiscovered += NfcService_OnNfcTagDiscovered;
             nfcService.OnNfcTagRead += NfcService_OnNfcTagRead;
             nfcService.OnNfcTagTextWriten += NfcService_OnNfcTagTextWriten;
+            nfcService.OnNfcTagUriWriten += NfcService_OnNfcTagUriWriten;
+            nfcService.OnNfcTagMimeWriten += NfcService_OnNfcTagMimeWriten;
 
             InitializeComponent();
         }
@@ -81,15 +83,35 @@ namespace AccessControl.Features
         {
             nfcService.StopWritingText();
             btnWriteText.IsEnabled = true;
-            Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "NFC card writen" : "Error writing NFC card");
-        }
-
-        private void btnWriteCustom_Clicked(System.Object sender, System.EventArgs e)
-        {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "Text writen on NFC card" : "Error writing text on NFC card");
         }
 
         private void btnWriteUri_Clicked(System.Object sender, System.EventArgs e)
         {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing uri...");
+            btnWriteUri.IsEnabled = false;
+            nfcService.WriteUri("https://jorgediegocrespo.wordpress.com/");
+        }
+
+        private void NfcService_OnNfcTagUriWriten(object sender, bool writen)
+        {
+            nfcService.StopWritingUri();
+            btnWriteUri.IsEnabled = true;
+            Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "Uri writen on NFC card" : "Error writing uri on NFC card");
+        }
+
+        private void btnWriteMime_Clicked(System.Object sender, System.EventArgs e)
+        {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing mime...");
+            btnWriteMime.IsEnabled = false;
+            nfcService.WriteMime("Hello NFC");
+        }
+
+        private void NfcService_OnNfcTagMimeWriten(object sender, bool writen)
+        {
+            nfcService.StopWritingMime();
+            btnWriteMime.IsEnabled = true;
+            Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "MIME writen on NFC card" : "Error writing MIME on NFC card");
         }
     }
 }
