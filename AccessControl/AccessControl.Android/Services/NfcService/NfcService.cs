@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Text;
 using AccessControl.Droid.Services;
 using AccessControl.Services;
 using Android.App;
@@ -18,8 +21,10 @@ namespace AccessControl.Droid.Services
 
         private bool isDiscovering;
         private bool isReading;
-        private bool isWriting;
+        private bool isWritingText;
         private bool isCleaning;
+
+        private string textToWrite;
 
         private Tag currentTag;
         private Intent currentItent;
@@ -31,6 +36,7 @@ namespace AccessControl.Droid.Services
         }
 
         public event EventHandler<NfcTagInfo> OnNfcTagRead;
+        public event EventHandler<bool> OnNfcTagTextWriten;
         public event EventHandler OnNfcTagDiscovered;
 
         internal static void OnNewIntent(Intent intent)
@@ -50,9 +56,10 @@ namespace AccessControl.Droid.Services
             ManageCurrentOperation();
         }
 
-        public void Write()
+        public void WriteText(string text)
         {
-            isWriting = true;
+            textToWrite = text;
+            isWritingText = true;
             ManageCurrentOperation();
         }
 
@@ -64,7 +71,7 @@ namespace AccessControl.Droid.Services
 
         public void StopDiscovering() => isDiscovering = false;
         public void StopReading() => isReading = false;
-        public void StopWriting() => isWriting = false;
+        public void StopWritingText() => isWritingText = false;
         public void StopCleaning() => isCleaning = false;
 
         private void ManageCurrentOperation()
@@ -89,24 +96,6 @@ namespace AccessControl.Droid.Services
                 PendingIntent pendingIntent = PendingIntent.GetActivity(ActivityProvider.CurrentActivity, 0, intent, 0);
 
                 nfcAdapter.EnableForegroundDispatch(ActivityProvider.CurrentActivity, pendingIntent, filters, null);
-
-                //if (nfcAdapter == null)
-                //    return;
-
-                //Intent intent = new Intent(ActivityProvider.CurrentActivity, ActivityProvider.CurrentActivity.GetType()).AddFlags(ActivityFlags.SingleTop);
-                //PendingIntent pendingIntent = PendingIntent.GetActivity(ActivityProvider.CurrentActivity, 0, intent, 0);
-
-                //IntentFilter ndefFilter = new IntentFilter(NfcAdapter.ActionNdefDiscovered);
-                //ndefFilter.AddDataType("*/*");
-
-                //IntentFilter tagFilter = new IntentFilter(NfcAdapter.ActionTagDiscovered);
-                //tagFilter.AddCategory(Intent.CategoryDefault);
-
-                //IntentFilter[] filters = new IntentFilter[] { ndefFilter, tagFilter };
-
-                //nfcAdapter.EnableForegroundDispatch(ActivityProvider.CurrentActivity, pendingIntent, filters, null);
-
-                //isReading = true;
             }
             catch
             {
@@ -134,28 +123,109 @@ namespace AccessControl.Droid.Services
             if (currentTag == null)
                 return;
 
-            NfcTagInfo nTag = GetNfcTagInfo(currentTag);
             if (isDiscovering)
-            {
-                OnNfcTagDiscovered?.Invoke(this, null);
-                currentItent = null;
-            }
+                ManageDiscoverOperation();
             if (isReading)
-            {
-                OnNfcTagRead?.Invoke(this, nTag);
-                currentItent = null;
-            }
-            
+                ManageReadOperation();
+            if (isWritingText)
+                ManageWriteTextOperation();
+        }
 
-            //if (isWriting)
-            //{
-            //    OnTagDiscovered?.Invoke(nTag, _isFormatting);
-            //}
-            //else
-            //{
-            //    // Read mode
-            //    OnMessageReceived?.Invoke(nTag);
-            //}
+        private void ManageDiscoverOperation()
+        {
+            OnNfcTagDiscovered?.Invoke(this, null);
+            currentItent = null;
+        }
+
+        private void ManageReadOperation()
+        {
+            NfcTagInfo nTag = GetNfcTagInfo(currentTag);
+
+            OnNfcTagRead?.Invoke(this, nTag);
+            currentItent = null;
+        }
+
+        private void ManageWriteTextOperation()
+        {
+            Ndef ndef = null;
+            bool writen = false;
+            try
+            {
+                NfcNdefRecord record = new NfcNdefRecord
+                {
+                    TypeFormat = NfcNdefTypeFormat.WellKnown,
+                    MimeType = "application/com.companyname.accesscontrol",
+                    Payload = NfcUtils.EncodeToByteArray(textToWrite),
+                };
+
+                ndef = Ndef.Get(currentTag);
+                if (!CheckWriteOperation(ndef, record))
+                    return;
+
+                ndef.Connect();
+                    
+                NdefMessage message = null;
+                List<NdefRecord> records = new List<NdefRecord>();
+                if (GetAndroidNdefRecord(record) is NdefRecord ndefRecord)
+                    records.Add(ndefRecord);
+
+                if (records.Any())
+                    message = new NdefMessage(records.ToArray());
+
+                if (message == null)
+                {
+                    Debug.WriteLine("NFC tag can not be writen with null message");
+                    return;
+                }
+                                        
+                ndef.WriteNdefMessage(message);
+                writen = true;
+            }
+            catch (Android.Nfc.TagLostException tlex)
+            {
+                throw new Exception("Tag Lost Error: " + tlex.Message);
+            }
+            catch (Java.IO.IOException ioex)
+            {
+                throw new Exception("Tag IO Error: " + ioex.Message);
+            }
+            catch (Android.Nfc.FormatException fe)
+            {
+                throw new Exception("Tag Format Error: " + fe.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Tag Error:" + ex.Message);
+            }
+            finally
+            {
+                if (ndef?.IsConnected == true)
+                    ndef.Close();
+
+                currentTag = null;
+                currentItent = null;
+                OnNfcTagTextWriten?.Invoke(this, writen);
+            }
+        }
+
+        private bool CheckWriteOperation(Ndef ndef, NfcNdefRecord record)
+        {
+            if (ndef == null)
+                return false;
+
+            if (!ndef.IsWritable)
+            {
+                Debug.WriteLine("NFC tag is readonly");
+                return false;
+            }
+
+            if (ndef.MaxSize < NfcUtils.GetSize(new NfcNdefRecord[] { record }))
+            {
+                Debug.WriteLine("NFC tag size is less than the message to write");
+                return false;
+            }
+
+            return true;
         }
 
         private NfcTagInfo GetNfcTagInfo(Tag tag, NdefMessage ndefMessage = null)
@@ -199,6 +269,40 @@ namespace AccessControl.Droid.Services
                 results.SetValue(ndefRecord, i);
             }
             return results;
+        }
+
+        private NdefRecord GetAndroidNdefRecord(NfcNdefRecord record)
+        {
+            if (record == null)
+                return null;
+
+            NdefRecord ndefRecord = null;
+            switch (record.TypeFormat)
+            {
+                case NfcNdefTypeFormat.WellKnown:
+                    ndefRecord = NdefRecord.CreateTextRecord("en", Encoding.UTF8.GetString(record.Payload));
+                    break;
+                case NfcNdefTypeFormat.Mime:
+                    ndefRecord = NdefRecord.CreateMime(record.MimeType, record.Payload);
+                    break;
+                case NfcNdefTypeFormat.Uri:
+                    ndefRecord = NdefRecord.CreateUri(Encoding.UTF8.GetString(record.Payload));
+                    break;
+                case NfcNdefTypeFormat.External:
+                    ndefRecord = NdefRecord.CreateExternal(record.ExternalDomain, record.ExternalType, record.Payload);
+                    break;
+                case NfcNdefTypeFormat.Empty:
+                    byte[] empty = Array.Empty<byte>();
+                    ndefRecord = new NdefRecord(NdefRecord.TnfEmpty, empty, empty, empty);
+                    break;
+                case NfcNdefTypeFormat.Unknown:
+                case NfcNdefTypeFormat.Unchanged:
+                case NfcNdefTypeFormat.Reserved:
+                default:
+                    break;
+
+            }
+            return ndefRecord;
         }
     }
 }

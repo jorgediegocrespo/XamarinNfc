@@ -5,7 +5,7 @@ namespace AccessControl.Services
 {
     public class NfcUtils
     {
-		internal static int GetSize(NfcNdefRecord[] records)
+		public static int GetSize(NfcNdefRecord[] records)
 		{
 			var size = 0;
 			if (records != null && records.Length > 0)
@@ -19,7 +19,7 @@ namespace AccessControl.Services
 			return size;
 		}
 
-		internal static string GetMessage(NfcNdefTypeFormat type, byte[] payload, string uri)
+		public static string GetMessage(NfcNdefTypeFormat type, byte[] payload, string uri)
 		{
 			string message;
 			if (!string.IsNullOrWhiteSpace(uri))

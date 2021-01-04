@@ -10,6 +10,10 @@
 
         <Button x:Name="btnDiscover" Text="Discover card" Clicked="btnDiscover_Clicked" Margin="20,0"/>
         <Button x:Name="btnRead" Text="Read NFC" Clicked="btnRead_Clicked" Margin="20,0"/>
+
+        <Button x:Name="btnWriteText" Text="Write text" Clicked="btnWriteText_Clicked" Margin="20,0"/>
+        <Button x:Name="btnWriteUri" Text="Write Uri" Clicked="btnWriteUri_Clicked" Margin="20,0"/>
+        <Button x:Name="btnWriteCustom" Text="write custom" Clicked="btnWriteCustom_Clicked" Margin="20,0"/>
         <Label x:Name="lbState" Text="Waiting..." HorizontalTextAlignment="Center"/>
     </StackLayout>
 

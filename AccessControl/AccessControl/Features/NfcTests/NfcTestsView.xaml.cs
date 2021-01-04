@@ -16,6 +16,7 @@ namespace AccessControl.Features
             nfcService = DependencyService.Get<INfcService>();
             nfcService.OnNfcTagDiscovered += NfcService_OnNfcTagDiscovered;
             nfcService.OnNfcTagRead += NfcService_OnNfcTagRead;
+            nfcService.OnNfcTagTextWriten += NfcService_OnNfcTagTextWriten;
 
             InitializeComponent();
         }
@@ -67,6 +68,28 @@ namespace AccessControl.Features
             }
 
             await DisplayAlert("NFC card read", message, "Ok");
+        }
+
+        private void btnWriteText_Clicked(System.Object sender, System.EventArgs e)
+        {
+            Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing text...");
+            btnWriteText.IsEnabled = false;
+            nfcService.WriteText("Hello NFC");
+        }
+
+        private void NfcService_OnNfcTagTextWriten(object sender, bool writen)
+        {
+            nfcService.StopWritingText();
+            btnWriteText.IsEnabled = true;
+            Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "NFC card writen" : "Error writing NFC card");
+        }
+
+        private void btnWriteCustom_Clicked(System.Object sender, System.EventArgs e)
+        {
+        }
+
+        private void btnWriteUri_Clicked(System.Object sender, System.EventArgs e)
+        {
         }
     }
 }

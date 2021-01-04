@@ -6,14 +6,15 @@ namespace AccessControl.Services
     {
         void StartDiscovering();
         void Read();
-        void Write();
+        void WriteText(string text);
         void Clean();
         void StopDiscovering();
         void StopReading();
-        void StopWriting();
+        void StopWritingText();
         void StopCleaning();
 
-        event EventHandler<NfcTagInfo> OnNfcTagRead;
         event EventHandler OnNfcTagDiscovered;
+        event EventHandler<NfcTagInfo> OnNfcTagRead;
+        event EventHandler<bool> OnNfcTagTextWriten;
     }
 }
