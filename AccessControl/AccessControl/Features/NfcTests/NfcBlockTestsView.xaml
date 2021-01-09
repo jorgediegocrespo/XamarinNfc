@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AccessControl.Features.NfcBlockTestsView">
+    <StackLayout>
+        <Frame BackgroundColor="#2196F3" Padding="24" CornerRadius="0" Margin="0,0,0,20">
+            <Label Text="Nfc block tests" HorizontalTextAlignment="Center" TextColor="White" FontSize="36"/>
+        </Frame>
+
+        <Button x:Name="btnReadBlock" Text="Read Block" Clicked="btnReadBlock_Clicked" Margin="20,0"/>
+        <Button x:Name="btnWriteBlock" Text="Write Block" Clicked="btnWriteBlock_Clicked" Margin="20,0"/>
+        <Button x:Name="btnResetBlock" Text="Reset Block" Clicked="btnResetBlock_Clicked" Margin="20,0"/>
+        <Button x:Name="btnStop" Text="Stop" Clicked="btnStop_Clicked" Margin="20,0"/>
+
+        <Label x:Name="lbState" Text="Waiting..." HorizontalTextAlignment="Center"/>
+    </StackLayout>
+</ContentPage>

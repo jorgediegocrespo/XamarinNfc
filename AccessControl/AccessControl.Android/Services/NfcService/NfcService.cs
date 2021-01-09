@@ -20,18 +20,21 @@ namespace AccessControl.Droid.Services
         private readonly NfcAdapter nfcAdapter;
 
         private bool isDiscovering;
-        private bool isReading;
-        private bool isWritingText;
-        private bool isWritingUri;
-        private bool isWritingMime;
-        private bool isCleaning;
+        private bool isReadingTag;
+        private bool isWritingTagText;
+        private bool isWritingTagUri;
+        private bool isWritingTagMime;
+        private bool isCleaningTag;
 
         private string textToWrite;
         private string uriToWrite;
         private string mimeToWrite;
 
         private Tag currentTag;
-        private Intent currentItent;
+        private Intent currentIntent;
+
+        private MifareClassic currentMifareClassic;
+        private byte[] innitialCardId;
 
         public NfcService()
         {
@@ -57,46 +60,46 @@ namespace AccessControl.Droid.Services
             ManageCurrentOperation();            
         }
 
-        public void Read()
+        public void ReadTag()
         {
-            isReading = true;
+            isReadingTag = true;
             ManageCurrentOperation();
         }
 
-        public void WriteText(string text)
+        public void WriteTagText(string text)
         {
             textToWrite = text;
-            isWritingText = true;
+            isWritingTagText = true;
             ManageCurrentOperation();
         }
 
-        public void WriteUri(string uri)
+        public void WriteTagUri(string uri)
         {
             uriToWrite = uri;
-            isWritingUri = true;
+            isWritingTagUri = true;
             ManageCurrentOperation();
         }
 
-        public void WriteMime(string mime)
+        public void WriteTagMime(string mime)
         {
             mimeToWrite = mime;
-            isWritingMime = true;
+            isWritingTagMime = true;
             ManageCurrentOperation();
         }
 
-        public void Clean()
+        public void CleanTag()
         {
-            isCleaning = true;
+            isCleaningTag = true;
             ManageCurrentOperation();
         }
 
         public void StopDiscovering() => isDiscovering = false;
-        public void StopReading() => isReading = false;
-        public void StopWritingText() => isWritingText = false;
-        public void StopWritingUri() => isWritingUri = false;
-        public void StopWritingMime() => isWritingMime = false;
-        public void StopCleaning() => isCleaning = false;
-
+        public void StopReadingTag() => isReadingTag = false;
+        public void StopWritingTagText() => isWritingTagText = false;
+        public void StopWritingTagUri() => isWritingTagUri = false;
+        public void StopWritingTagMime() => isWritingTagMime = false;
+        public void StopCleaningTag() => isCleaningTag = false;
+        
         private void ManageCurrentOperation()
         {
             try
@@ -104,7 +107,7 @@ namespace AccessControl.Droid.Services
                 if (nfcAdapter == null)
                     return; //NFC not supported
 
-                if (currentItent != null)
+                if (currentIntent != null)
                 {
                     ManageCurrentItent();
                     return;
@@ -128,42 +131,41 @@ namespace AccessControl.Droid.Services
 
         private void ManageIntent(Intent intent)
         {
-            currentItent = intent;
+            currentIntent = intent;
             ManageCurrentItent();
         }
 
         private void ManageCurrentItent()
         {
-            if (currentItent == null)
+            if (currentIntent == null)
                 return;
 
-            if (currentItent.Action != NfcAdapter.ActionTagDiscovered &&
-                currentItent.Action != NfcAdapter.ActionNdefDiscovered &&
-                currentItent.Action != NfcAdapter.ActionTechDiscovered)
+            if (currentIntent.Action != NfcAdapter.ActionTagDiscovered &&
+                currentIntent.Action != NfcAdapter.ActionNdefDiscovered &&
+                currentIntent.Action != NfcAdapter.ActionTechDiscovered)
                 return;
 
-            currentTag = currentItent.GetParcelableExtra(NfcAdapter.ExtraTag) as Tag;
+            currentTag = currentIntent.GetParcelableExtra(NfcAdapter.ExtraTag) as Tag;
             if (currentTag == null)
                 return;
 
             if (isDiscovering)
                 ManageDiscoverOperation();
-            if (isReading)
+            if (isReadingTag)
                 ManageReadOperation();
-            if (isWritingText)
+            if (isWritingTagText)
                 ManageWriteTextOperation();
-            if (isWritingUri)
+            if (isWritingTagUri)
                 ManageWriteUriOperation();
-            if (isWritingMime)
+            if (isWritingTagMime)
                 ManageWriteMimeOperation();
-            if (isCleaning)
+            if (isCleaningTag)
                 ManageCleanOperation();
         }
 
         private void ManageDiscoverOperation()
         {
             OnNfcTagDiscovered?.Invoke(this, null);
-            currentItent = null;
         }
 
         private void ManageReadOperation()
@@ -171,7 +173,7 @@ namespace AccessControl.Droid.Services
             NfcTagInfo nTag = GetNfcTagInfo(currentTag);
 
             OnNfcTagRead?.Invoke(this, nTag);
-            currentItent = null;
+            currentIntent = null;
         }
 
         private void ManageWriteTextOperation()
@@ -259,7 +261,7 @@ namespace AccessControl.Droid.Services
                     ndef.Close();
 
                 currentTag = null;
-                currentItent = null;
+                currentIntent = null;
             }
 
             return false;
@@ -309,7 +311,7 @@ namespace AccessControl.Droid.Services
                     ndef.Close();
 
                 currentTag = null;
-                currentItent = null;
+                currentIntent = null;
             }
 
             OnNfcTagCleaned?.Invoke(this, false);
@@ -411,5 +413,92 @@ namespace AccessControl.Droid.Services
             }
             return ndefRecord;
         }
+
+
+
+
+
+
+
+
+        public byte[] ReadByteBlock(int block, byte[] key, NfcKeyType nfcKeyType)
+        {
+            try
+            {
+                //No card found
+                if (!LoadCurrentMifareClassic())                    return null;
+
+                //Different card ids
+                if (!CheckCardId())                    return null;                //No authenticated                if (!AuthenticateSector(block, nfcKeyType, key))                    return null;                byte[] data = currentMifareClassic.ReadBlock(block);
+                return data;
+            }            catch            {                return null;            }
+        }
+
+        public bool WriteByteBlock(int block, byte[] key, byte[] content, NfcKeyType nfcKeyType)
+        {
+            try
+            {
+                if (content?.Length != 16)
+                    return false;
+
+                //No card found
+                if (!LoadCurrentMifareClassic())
+                    return false;
+
+                //Different card ids
+                if (!CheckCardId())
+                    return false;
+
+                //No authenticated
+                if (!AuthenticateSector(block, nfcKeyType, key))
+                    return false;
+
+                currentMifareClassic.WriteBlock(block, content);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public void StopByteBlockOperations()
+        {
+            innitialCardId = null;            currentMifareClassic?.Close();            currentMifareClassic?.Dispose();            currentMifareClassic = null;
+
+            currentTag = null;
+            currentIntent = null;
+        }
+
+        private bool LoadCurrentMifareClassic()        {            if (currentMifareClassic != null)
+            {
+                ConnectCurrentMifareClassic();
+                return true;
+            }
+
+            if (currentTag == null)
+                return false;
+
+            currentMifareClassic = MifareClassic.Get(currentTag);
+            if (currentMifareClassic == null)
+                return false;
+
+            ConnectCurrentMifareClassic();
+            return true;        }
+
+        private void ConnectCurrentMifareClassic()        {            if (!currentMifareClassic.IsConnected)                currentMifareClassic.Connect();        }
+
+        private bool CheckCardId()        {            SetCardId();            if (currentTag == null)                return false;            byte[] currentCardId = currentTag.GetId();            if (innitialCardId == null || currentCardId == null)                return false;            if (BitConverter.ToString(innitialCardId) != BitConverter.ToString(currentCardId))                return false;            return true;        }
+
+        private bool SetCardId()        {            if (innitialCardId != null)                return true;            if (currentTag == null)                return false;            innitialCardId = currentTag.GetId();            return true;        }
+
+        private bool AuthenticateSector(int block, NfcKeyType nfcKeyType, byte[] key)        {            int sector = currentMifareClassic.BlockToSector(block);            switch (nfcKeyType)
+            {
+                case NfcKeyType.KeyB:
+                    return key != null && currentMifareClassic.AuthenticateSectorWithKeyB(sector, key);
+                case NfcKeyType.KeyA:
+                default:
+                    return key != null && currentMifareClassic.AuthenticateSectorWithKeyA(sector, key);
+            }        }
     }
 }

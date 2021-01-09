@@ -16,6 +16,7 @@
         <Button x:Name="btnWriteMime" Text="write mime" Clicked="btnWriteMime_Clicked" Margin="20,0"/>
 
         <Button x:Name="btnClean" Text="Clean NFC" Clicked="btnClean_Clicked" Margin="20,0"/>
+
         <Label x:Name="lbState" Text="Waiting..." HorizontalTextAlignment="Center"/>
     </StackLayout>
 

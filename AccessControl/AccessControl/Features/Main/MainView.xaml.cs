@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-using Xamarin.Forms;
-
-namespace AccessControl.Features
+﻿namespace AccessControl.Features
 {
     public partial class MainView
     {
@@ -12,12 +7,17 @@ namespace AccessControl.Features
             InitializeComponent();
         }
 
-        private async void NfcTests_Clicked(System.Object sender, System.EventArgs e)
+        private async void btnNfcTests_Clicked(System.Object sender, System.EventArgs e)
         {
             await Navigation.PushAsync(new NfcTestsView());
         }
 
-        private async void AccessControl_Clicked(System.Object sender, System.EventArgs e)
+        private async void btnNfcBlockTests_Clicked(System.Object sender, System.EventArgs e)
+        {
+            await Navigation.PushAsync(new NfcBlockTestsView());
+        }
+
+        private async void btnAccessControl_Clicked(System.Object sender, System.EventArgs e)
         {
             await Navigation.PushAsync(new AccessControlView());
         }

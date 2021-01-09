@@ -4,8 +4,9 @@
              x:Class="AccessControl.Features.MainView">
 
     <StackLayout HorizontalOptions="Center" VerticalOptions="Center">
-        <Button x:Name="NfcTests" Text="NFC tests" Clicked="NfcTests_Clicked" />
-        <Button x:Name="AccessControl" Text="Access control" Clicked="AccessControl_Clicked" />
+        <Button x:Name="btnNfcTests" Text="NFC tests" Clicked="btnNfcTests_Clicked" />
+        <Button x:Name="btnNfcBlockTests" Text="NFC Block tests" Clicked="btnNfcBlockTests_Clicked" />
+        <Button x:Name="btnAccessControl" Text="Access control" Clicked="btnAccessControl_Clicked" />
     </StackLayout>
 
 </ContentPage>

@@ -42,12 +42,12 @@ namespace AccessControl.Features
         {
             Device.BeginInvokeOnMainThread(() => lbState.Text = "Reading...");
             btnRead.IsEnabled = false;
-            nfcService.Read();
+            nfcService.ReadTag();
         }
 
         private async void NfcService_OnNfcTagRead(object sender, NfcTagInfo e)
         {
-            nfcService.StopReading();
+            nfcService.StopReadingTag();
             btnRead.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card read");
             await ShowNfcMessage(e.Records.FirstOrDefault());
@@ -77,12 +77,12 @@ namespace AccessControl.Features
         {
             Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing text...");
             btnWriteText.IsEnabled = false;
-            nfcService.WriteText("Hello NFC");
+            nfcService.WriteTagText("Hello NFC");
         }
 
         private void NfcService_OnNfcTagTextWriten(object sender, bool writen)
         {
-            nfcService.StopWritingText();
+            nfcService.StopWritingTagText();
             btnWriteText.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "Text writen on NFC card" : "Error writing text on NFC card");
         }
@@ -91,12 +91,12 @@ namespace AccessControl.Features
         {
             Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing uri...");
             btnWriteUri.IsEnabled = false;
-            nfcService.WriteUri("https://jorgediegocrespo.wordpress.com/");
+            nfcService.WriteTagUri("https://jorgediegocrespo.wordpress.com/");
         }
 
         private void NfcService_OnNfcTagUriWriten(object sender, bool writen)
         {
-            nfcService.StopWritingUri();
+            nfcService.StopWritingTagUri();
             btnWriteUri.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "Uri writen on NFC card" : "Error writing uri on NFC card");
         }
@@ -105,12 +105,12 @@ namespace AccessControl.Features
         {
             Device.BeginInvokeOnMainThread(() => lbState.Text = "Writing mime...");
             btnWriteMime.IsEnabled = false;
-            nfcService.WriteMime("Hello NFC");
+            nfcService.WriteTagMime("Hello NFC");
         }
 
         private void NfcService_OnNfcTagMimeWriten(object sender, bool writen)
         {
-            nfcService.StopWritingMime();
+            nfcService.StopWritingTagMime();
             btnWriteMime.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = writen ? "MIME writen on NFC card" : "Error writing MIME on NFC card");
         }
@@ -119,12 +119,12 @@ namespace AccessControl.Features
         {
             Device.BeginInvokeOnMainThread(() => lbState.Text = "Cleaning NFC card...");
             btnClean.IsEnabled = false;
-            nfcService.Clean();
+            nfcService.CleanTag();
         }
 
         private void NfcService_OnNfcTagCleaned(object sender, bool cleaned)
         {
-            nfcService.StopCleaning();
+            nfcService.StopCleaningTag();
             btnClean.IsEnabled = true;
             Device.BeginInvokeOnMainThread(() => lbState.Text = cleaned ? "NFC card cleaned" : "Error cleaning NFC card");
         }
