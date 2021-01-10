@@ -32,7 +32,10 @@ namespace AccessControl.Features
             base.OnAppearing();
 
             if (!initiated)
+            {
                 nfcService.StartDiscovering();
+                initiated = true;
+            }
         }
 
         private void NfcService_OnNfcTagDiscovered(object sender, System.EventArgs e)
