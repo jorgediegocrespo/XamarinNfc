@@ -4,6 +4,7 @@
     {
         public AccessControlView()
         {
+            NavigationPage.SetHasBackButton(this, false);
             InitializeComponent();
         }
     }

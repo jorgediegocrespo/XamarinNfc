@@ -21,7 +21,20 @@ namespace AccessControl.Features
             nfcService.OnNfcTagMimeWriten += NfcService_OnNfcTagMimeWriten;
             nfcService.OnNfcTagCleaned += NfcService_OnNfcTagCleaned;
 
+            NavigationPage.SetHasBackButton(this, false);
             InitializeComponent();
+        }
+
+        protected override bool OnBackButtonPressed()
+        {
+            nfcService.OnNfcTagDiscovered -= NfcService_OnNfcTagDiscovered;
+            nfcService.OnNfcTagRead -= NfcService_OnNfcTagRead;
+            nfcService.OnNfcTagTextWriten -= NfcService_OnNfcTagTextWriten;
+            nfcService.OnNfcTagUriWriten -= NfcService_OnNfcTagUriWriten;
+            nfcService.OnNfcTagMimeWriten -= NfcService_OnNfcTagMimeWriten;
+            nfcService.OnNfcTagCleaned -= NfcService_OnNfcTagCleaned;
+
+            return base.OnBackButtonPressed();
         }
 
         private void btnDiscover_Clicked(System.Object sender, System.EventArgs e)

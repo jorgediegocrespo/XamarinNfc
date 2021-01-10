@@ -1,9 +1,9 @@
-﻿namespace AccessControl.Features
-{
-    using System;
-    using AccessControl.Services;
-    using Xamarin.Forms;
+﻿using System;
+using AccessControl.Services;
+using Xamarin.Forms;
 
+namespace AccessControl.Features
+{
     public partial class NfcBlockTestsView
     {
         private readonly INfcService nfcService;
@@ -17,7 +17,14 @@
 
             nfcService.OnNfcTagDiscovered += NfcService_OnNfcTagDiscovered;
 
+            NavigationPage.SetHasBackButton(this, false);
             InitializeComponent();
+        }
+
+        protected override bool OnBackButtonPressed()
+        {
+            nfcService.OnNfcTagDiscovered -= NfcService_OnNfcTagDiscovered;
+            return base.OnBackButtonPressed();
         }
 
         protected override void OnAppearing()

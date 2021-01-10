@@ -21,5 +21,10 @@
         {
             await Navigation.PushAsync(new AccessControlView());
         }
+
+        private async void btnCardManagement_Clicked(System.Object sender, System.EventArgs e)
+        {
+            await Navigation.PushAsync(new CardManagementView());
+        }
     }
 }

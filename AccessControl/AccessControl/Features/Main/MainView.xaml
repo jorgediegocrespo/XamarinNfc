@@ -4,9 +4,22 @@
              x:Class="AccessControl.Features.MainView">
 
     <StackLayout HorizontalOptions="Center" VerticalOptions="Center">
-        <Button x:Name="btnNfcTests" Text="NFC tests" Clicked="btnNfcTests_Clicked" />
-        <Button x:Name="btnNfcBlockTests" Text="NFC Block tests" Clicked="btnNfcBlockTests_Clicked" />
-        <Button x:Name="btnAccessControl" Text="Access control" Clicked="btnAccessControl_Clicked" />
+        <Frame HasShadow="True" BorderColor="Black" CornerRadius="20">
+            <StackLayout>
+                <Label Text="Tests" />
+                <Button x:Name="btnNfcTests" Text="NFC tests" Clicked="btnNfcTests_Clicked" />
+                <Button x:Name="btnNfcBlockTests" Text="NFC Block tests" Clicked="btnNfcBlockTests_Clicked" />
+            </StackLayout>
+        </Frame>
+
+        <Frame HasShadow="True" BorderColor="Black" CornerRadius="20">
+            <StackLayout>
+                <Label Text="Access control" />
+
+                <Button x:Name="btnCardManagement" Text="Card management" Clicked="btnCardManagement_Clicked" />
+                <Button x:Name="btnAccessControl" Text="Access control" Clicked="btnAccessControl_Clicked" />
+            </StackLayout>
+        </Frame>
     </StackLayout>
 
 </ContentPage>

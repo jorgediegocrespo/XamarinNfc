@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AccessControl.Features.CardManagementView">
+    <StackLayout Padding="20">
+        <Frame BackgroundColor="#2196F3" Padding="24" CornerRadius="0" Margin="-20, -20, -20, 20">
+            <Label Text="Card management" HorizontalTextAlignment="Center" TextColor="White" FontSize="36"/>
+        </Frame>
+
+        <Button x:Name="btnReadInfo" Text="Read" Clicked="btnReadInfo_Clicked" Margin="20,0"/>
+
+        <Entry x:Name="enNif" Placeholder="NIF" HorizontalOptions="FillAndExpand" />
+        <Entry x:Name="enName" Placeholder="Name" HorizontalOptions="FillAndExpand" />
+        <Entry x:Name="enSurname" Placeholder="Surname" HorizontalOptions="FillAndExpand" />
+
+        <Picker x:Name="pkType" Title="Type" HorizontalOptions="FillAndExpand"
+                SelectedIndex="0" SelectedIndexChanged="pkType_SelectedIndexChanged"
+                Margin="0,20">
+            <Picker.Items>
+                <x:String>Tickets</x:String>
+                <x:String>Till date</x:String>
+            </Picker.Items>
+        </Picker>
+        <Grid Padding="0">
+            <Entry x:Name="enTickets" Placeholder="Tickets" HorizontalOptions="FillAndExpand" Keyboard="Numeric" />
+            <DatePicker x:Name="dpEndDate" HorizontalOptions="FillAndExpand" IsVisible="False" />
+        </Grid>
+
+        <Button x:Name="btnSave" Text="Save" Clicked="btnSave_Clicked" Margin="20,0"/>
+    </StackLayout>
+</ContentPage>
