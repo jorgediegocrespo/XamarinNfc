@@ -38,6 +38,7 @@ namespace AccessControl.Droid.Services
 
         public NfcService()
         {
+            //TODO 1. DISCOVERING CARD 3
             nfcAdapter = NfcAdapter.GetDefaultAdapter(ActivityProvider.CurrentActivity);
             instance = this;
         }
@@ -113,11 +114,11 @@ namespace AccessControl.Droid.Services
                     return;
                 }
 
+                //TODO 1. DISCOVERING CARD 4
                 IntentFilter tagDetected = new IntentFilter(NfcAdapter.ActionTagDiscovered);
                 IntentFilter ndefDetected = new IntentFilter(NfcAdapter.ActionNdefDiscovered);
-                IntentFilter techDetected = new IntentFilter(NfcAdapter.ActionTechDiscovered);
 
-                IntentFilter[] filters = new[] { tagDetected, ndefDetected, techDetected };
+                IntentFilter[] filters = new[] { tagDetected, ndefDetected };
                 Intent intent = new Intent(ActivityProvider.CurrentActivity, ActivityProvider.CurrentActivity.GetType()).AddFlags(ActivityFlags.SingleTop);
                 PendingIntent pendingIntent = PendingIntent.GetActivity(ActivityProvider.CurrentActivity, 0, intent, 0);
 
@@ -141,8 +142,7 @@ namespace AccessControl.Droid.Services
                 return;
 
             if (currentIntent.Action != NfcAdapter.ActionTagDiscovered &&
-                currentIntent.Action != NfcAdapter.ActionNdefDiscovered &&
-                currentIntent.Action != NfcAdapter.ActionTechDiscovered)
+                currentIntent.Action != NfcAdapter.ActionNdefDiscovered)
                 return;
 
             currentTag = currentIntent.GetParcelableExtra(NfcAdapter.ExtraTag) as Tag;
@@ -168,20 +168,61 @@ namespace AccessControl.Droid.Services
             OnNfcTagDiscovered?.Invoke(this, null);
         }
 
+
         private void ManageReadOperation()
         {
+            //TODO 2. READING CARD 5
             NfcTagInfo nTag = GetNfcTagInfo(currentTag);
 
             OnNfcTagRead?.Invoke(this, nTag);
             currentIntent = null;
         }
 
+        private NfcTagInfo GetNfcTagInfo(Tag tag)
+        {
+            if (tag == null)
+                return null;
+
+            Ndef ndef = Ndef.Get(tag);
+            NfcTagInfo nTag = new NfcTagInfo();
+
+            if (ndef != null)
+            {
+                if (ndef.CachedNdefMessage != null)
+                {
+                    NdefMessage ndefMessage = ndef.CachedNdefMessage; //TODO 2. READING CARD 6 ndef.NdefMessage -> TagLost
+                    var records = ndefMessage.GetRecords();
+                    nTag.Records = GetRecords(records);
+                }
+            }
+
+            return nTag;
+        }
+
+        private NfcNdefRecord[] GetRecords(NdefRecord[] records)
+        {
+            var results = new NfcNdefRecord[records.Length];
+            for (var i = 0; i < records.Length; i++)
+            {
+                var ndefRecord = new NfcNdefRecord
+                {
+                    TypeFormat = (NfcNdefTypeFormat)records[i].Tnf,
+                    Uri = records[i].ToUri()?.ToString(),
+                    MimeType = records[i].ToMimeType(),
+                    Payload = records[i].GetPayload()
+                };
+                results.SetValue(ndefRecord, i);
+            }
+            return results;
+        }
+
+
+
         private void ManageWriteTextOperation()
         {
             NfcNdefRecord record = new NfcNdefRecord
             {
                 TypeFormat = NfcNdefTypeFormat.WellKnown,
-                MimeType = "application/com.companyname.accesscontrol",
                 Payload = NfcUtils.EncodeToByteArray(textToWrite),
             };
 
@@ -204,7 +245,6 @@ namespace AccessControl.Droid.Services
             NfcNdefRecord record = new NfcNdefRecord
             {
                 TypeFormat = NfcNdefTypeFormat.Mime,
-                MimeType = "application/com.companyname.accesscontrol",
                 Payload = NfcUtils.EncodeToByteArray(mimeToWrite)
             };
 
@@ -213,6 +253,7 @@ namespace AccessControl.Droid.Services
 
         private bool WriteNfcNdefRecord(NfcNdefRecord record)
         {
+            //TODO 3. WRITING CARD 4
             Ndef ndef = null;
             try
             {
@@ -269,6 +310,7 @@ namespace AccessControl.Droid.Services
 
         private void ManageCleanOperation()
         {
+            //TODO 3. WRITING CARD 5
             Ndef ndef = null;
             NfcNdefRecord record = null;
             try
@@ -319,6 +361,7 @@ namespace AccessControl.Droid.Services
 
         private bool CheckWriteOperation(Ndef ndef, NfcNdefRecord record)
         {
+            //TODO 3. WRITING CARD 6
             if (ndef == null)
                 return false;
 
@@ -335,49 +378,6 @@ namespace AccessControl.Droid.Services
             }
 
             return true;
-        }
-
-        private NfcTagInfo GetNfcTagInfo(Tag tag, NdefMessage ndefMessage = null)
-        {
-            if (tag == null)
-                return null;
-
-            Ndef ndef = Ndef.Get(tag);
-            NfcTagInfo nTag = new NfcTagInfo(tag.GetId(), ndef != null);
-
-            if (ndef != null)
-            {
-                nTag.Capacity = ndef.MaxSize;
-                nTag.IsWritable = ndef.IsWritable;
-
-                if (ndefMessage == null)
-                    ndefMessage = ndef.CachedNdefMessage;
-
-                if (ndefMessage != null)
-                {
-                    var records = ndefMessage.GetRecords();
-                    nTag.Records = GetRecords(records);
-                }
-            }
-
-            return nTag;
-        }
-
-        private NfcNdefRecord[] GetRecords(NdefRecord[] records)
-        {
-            var results = new NfcNdefRecord[records.Length];
-            for (var i = 0; i < records.Length; i++)
-            {
-                var ndefRecord = new NfcNdefRecord
-                {
-                    TypeFormat = (NfcNdefTypeFormat)records[i].Tnf,
-                    Uri = records[i].ToUri()?.ToString(),
-                    MimeType = records[i].ToMimeType(),
-                    Payload = records[i].GetPayload()
-                };
-                results.SetValue(ndefRecord, i);
-            }
-            return results;
         }
 
         private NdefRecord GetAndroidNdefRecord(NfcNdefRecord record)
@@ -397,13 +397,11 @@ namespace AccessControl.Droid.Services
                 case NfcNdefTypeFormat.Uri:
                     ndefRecord = NdefRecord.CreateUri(Encoding.UTF8.GetString(record.Payload));
                     break;
-                case NfcNdefTypeFormat.External:
-                    ndefRecord = NdefRecord.CreateExternal(record.ExternalDomain, record.ExternalType, record.Payload);
-                    break;
                 case NfcNdefTypeFormat.Empty:
                     byte[] empty = Array.Empty<byte>();
                     ndefRecord = new NdefRecord(NdefRecord.TnfEmpty, empty, empty, empty);
                     break;
+                case NfcNdefTypeFormat.External:
                 case NfcNdefTypeFormat.Unknown:
                 case NfcNdefTypeFormat.Unchanged:
                 case NfcNdefTypeFormat.Reserved:
@@ -420,9 +418,10 @@ namespace AccessControl.Droid.Services
 
 
 
-
+        
         public byte[] ReadByteBlock(int block, byte[] key, NfcKeyType nfcKeyType)
         {
+            //TODO 4. MIFARE OPERATIONS 2
             try
             {
                 //No card found
@@ -436,6 +435,7 @@ namespace AccessControl.Droid.Services
 
         public bool WriteByteBlock(int block, byte[] key, byte[] content, NfcKeyType nfcKeyType)
         {
+            //TODO 4. MIFARE OPERATIONS 3
             try
             {
                 if (content?.Length != 16)

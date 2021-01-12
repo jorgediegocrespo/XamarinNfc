@@ -26,6 +26,8 @@ namespace AccessControl.Droid
         protected override void OnNewIntent(Intent intent)
         {
             base.OnNewIntent(intent);
+
+            //TODO 1. DISCOVERING CARD 5
             Services.NfcService.OnNewIntent(intent);
         }
     }
