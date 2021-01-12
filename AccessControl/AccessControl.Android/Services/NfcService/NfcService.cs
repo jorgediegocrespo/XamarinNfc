@@ -10,6 +10,7 @@ using Android.Content;
 using Android.Nfc;
 using Android.Nfc.Tech;
 using Xamarin.Forms;
+using AccessControl.Extensions;
 
 [assembly: Dependency(typeof(NfcService))]
 namespace AccessControl.Droid.Services
@@ -35,6 +36,10 @@ namespace AccessControl.Droid.Services
 
         private MifareClassic currentMifareClassic;
         private byte[] innitialCardId;
+
+        private IsoDep currentIsoDept;
+        private byte[] appToSelect;
+        private bool isSelectingApp;
 
         public NfcService()
         {
@@ -161,13 +166,13 @@ namespace AccessControl.Droid.Services
                 ManageWriteMimeOperation();
             if (isCleaningTag)
                 ManageCleanOperation();
+            if (isSelectingApp)                SelectApp();
         }
 
         private void ManageDiscoverOperation()
         {
             OnNfcTagDiscovered?.Invoke(this, null);
         }
-
 
         private void ManageReadOperation()
         {
@@ -215,8 +220,6 @@ namespace AccessControl.Droid.Services
             }
             return results;
         }
-
-
 
         private void ManageWriteTextOperation()
         {
@@ -411,13 +414,6 @@ namespace AccessControl.Droid.Services
             }
             return ndefRecord;
         }
-
-
-
-
-
-
-
         
         public byte[] ReadByteBlock(int block, byte[] key, NfcKeyType nfcKeyType)
         {
@@ -500,5 +496,215 @@ namespace AccessControl.Droid.Services
                 default:
                     return key != null && currentMifareClassic.AuthenticateSectorWithKeyA(sector, key);
             }        }
+
+        public void StartSelectingApp(byte[] app)
+        {
+            appToSelect = app;            isSelectingApp = true;            ManageCurrentItent();
+        }
+
+        private void SelectApp()        {            try
+            {
+                if (!LoadCurrentIsoDept())
+                    OnAppSelected?.Invoke(this, false);
+
+                List<byte> selectOperation = new List<byte> { 0x5A };                selectOperation.AddRange(appToSelect);                byte[] result = currentIsoDept.Transceive(selectOperation.ToArray());                if (result.Length == 1 && result[0] == 0x00)                    OnAppSelected?.Invoke(this, true);                else                    OnAppSelected?.Invoke(this, false);
+            }            catch            {                OnAppSelected?.Invoke(this, false);            }        }
+
+        public byte[] FirstChallenge(byte keyNo)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return null;
+
+                byte[] op = new byte[] { 0x0A, keyNo };                byte[] result = currentIsoDept.Transceive(new byte[] { 0x0A, keyNo });                if (result != null && result.Length > 0 && result[0] == 0xAF)                    return result.Skip(1).ToArray();                else                    return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public byte[] SecondChallenge(byte[] value)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return null;
+
+                List<byte> op = new List<byte> { 0xAF };                op.AddRange(value);                byte[] result = currentIsoDept.Transceive(op.ToArray());                if (result != null && result.Length == 9 && result[0] == 0x00)                    return result.Skip(1).ToArray();                else                    return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public byte[] GetValue(int file)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return null;
+
+                List<byte> readFileOp = new List<byte> { 0x6C };                string hexFile = file.ToString("X").PadLeft(2, '0');                readFileOp.AddRange(hexFile.StringToByteArray()); //Files
+
+                byte[] result = currentIsoDept.Transceive(readFileOp.ToArray());                if (result.Length > 0 && result[0] == 0x00)                    return result.Skip(1).ToArray();                else                    return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public byte[] ReadData(int file, int offset, int lenght)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return null;
+
+                return Read(0xBD, file, offset, lenght);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public byte[] ReadRecords(int file, int firstRegister, int numberOfRegisters)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return null;
+
+                return Read(0xBB, file, firstRegister, numberOfRegisters);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public bool WriteData(int file, byte[] data, int offset, int lenght)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return false;
+
+                return Write(0x3D, data, file, offset, lenght);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool WriteRecord(int file, byte[] data, int length)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return false;
+
+                return Write(0x3B, data, file, 0, length);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool IncrementValue(int file, byte[] data)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return false;
+
+                List<byte> incrementOp = new List<byte> { 0x0C };                string fileHex = file.ToString("X").PadLeft(2, '0');                incrementOp.AddRange(fileHex.StringToByteArray()); //Files
+                incrementOp.AddRange(data); //Data
+
+                byte[] result = currentIsoDept.Transceive(incrementOp.ToArray());                if (result.Length == 1 && result[0] == 0x00)                    return true;                else                    return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool DecrementValue(int file, byte[] data)
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return false;
+
+                List<byte> decrementOp = new List<byte> { 0xDC };                string fileHex = file.ToString("X").PadLeft(2, '0');                decrementOp.AddRange(fileHex.StringToByteArray()); //Files
+                decrementOp.AddRange(data); //Data
+
+                byte[] result = currentIsoDept.Transceive(decrementOp.ToArray());                if (result.Length == 1 && result[0] == 0x00)                    return true;                else                    return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool CommitOperations()
+        {
+            try
+            {
+                if (!LoadCurrentIsoDept())
+                    return false;
+
+                byte[] result = currentIsoDept.Transceive(new byte[] { 0xC7 });                if (result.Length == 1 && result[0] == 0x00)                    return true;                else                    return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public void StopSelectingApp() => isSelectingApp = false;
+
+        public void StopApduOperations()
+        {
+            currentIsoDept?.Close();            currentIsoDept?.Dispose();            currentIsoDept = null;
+
+            currentTag = null;
+            currentIntent = null;
+        }
+
+        public event EventHandler<bool> OnAppSelected;
+
+        private bool LoadCurrentIsoDept()        {            if (currentIsoDept != null)
+            {
+                ConnectCurrentIsoDept();                return true;
+            }            if (currentTag == null)                return false;            currentIsoDept = IsoDep.Get(currentTag);            if (currentIsoDept == null)                return false;            ConnectCurrentIsoDept();            return true;        }
+
+        private void ConnectCurrentIsoDept()        {            if (!currentIsoDept.IsConnected)                currentIsoDept.Connect();        }
+
+        private byte[] Read(byte operation, int fileToRead, int offsetToRead, int lengthToRead)        {            List<byte> readFileOp = new List<byte> { operation };            string file = fileToRead.ToString("X").PadLeft(2, '0');            readFileOp.AddRange(file.StringToByteArray()); //File
+
+            string offset = offsetToRead.ToString("X").PadLeft(6, '0');            readFileOp.AddRange(offset.GetReverseHex().StringToByteArray()); //Offset
+
+            string lenght = lengthToRead.ToString("X").PadLeft(6, '0');            readFileOp.AddRange(lenght.GetReverseHex().StringToByteArray()); //Length
+
+            bool continueReading = false;            List<byte> totalResult = new List<byte>();            do            {                byte[] result = currentIsoDept.Transceive(readFileOp.ToArray());                if (result.Length > 0 && result[0] == 0xAF)                {                    totalResult.AddRange(result.Skip(1));                    readFileOp = new List<byte> { 0xAF };                    continueReading = true;                }                else if (result.Length > 0 && result[0] == 0x00)                {                    totalResult.AddRange(result.Skip(1));                    continueReading = false;                }                else                {                    totalResult = null;                    continueReading = false;                }            }            while (continueReading);            return totalResult.ToArray();        }
+
+        private bool Write(byte operation, byte[] dataToWrite, int fileToWrite, int offsetToWrite, int lengthToWrite)        {            try            {                bool finished = false;                int index = 0;                do                {                    byte[] result;                    if (index == 0)                        result = WriteFirstBlock(operation, dataToWrite, fileToWrite, offsetToWrite, lengthToWrite);                    else                        result = ContinueWritingBlock(index, dataToWrite);                    if (result.Length == 1 && result[0] == 0x00)                    {                        finished = true;                        return true;                    }                    else if (result.Length == 1 && result[0] == 0xAF)                    {                        finished = false;                    }                    else                    {                        finished = true;                        return false;                    }                    index++;                } while (!finished);                return false;            }            catch            {                return false;            }        }        private byte[] WriteFirstBlock(byte operation, byte[] dataToWrite, int fileToWrite, int offsetToWrite, int lengthToWrite)        {            int fileLength = dataToWrite.Length / 2;            List<byte> writeFileOp = new List<byte> { operation };            string file = fileToWrite.ToString("X").PadLeft(2, '0');            writeFileOp.AddRange(file.StringToByteArray()); //File
+
+            string offset = offsetToWrite.ToString("X").PadLeft(6, '0');            writeFileOp.AddRange(offset.GetReverseHex().StringToByteArray()); //Offset
+
+            int length = lengthToWrite == 0 ? dataToWrite.Length / 2 : lengthToWrite;            string hexLength = length.ToString("X").PadLeft(6, '0');            writeFileOp.AddRange(hexLength.GetReverseHex().StringToByteArray()); //Length
+
+            if (fileLength > 52)            {                byte[] currentFileToWrite = new byte[52];                dataToWrite.ToList().CopyTo(0, currentFileToWrite, 0, 52);                writeFileOp.AddRange(currentFileToWrite); //Data
+            }            else            {                writeFileOp.AddRange(dataToWrite); //Data
+            }            byte[] result = currentIsoDept.Transceive(writeFileOp.ToArray());            return result;        }        private byte[] ContinueWritingBlock(int index, byte[] dataToWrite)        {            int fileLength = dataToWrite.Length / 2;            List<byte> writeFileOp = new List<byte> { 0xAF };            if (fileLength > 52 + (index * 59))            {                byte[] currentFileToWrite = new byte[59];                dataToWrite.ToList().CopyTo(52 + ((index - 1) * 59), currentFileToWrite, 0, 59);                writeFileOp.AddRange(currentFileToWrite); //Data
+            }            else            {                int blockSize = 59 - (52 + (index * 59) - fileLength);                byte[] currentFileToWrite = new byte[blockSize];                dataToWrite.ToList().CopyTo(52 + ((index - 1) * 59), currentFileToWrite, 0, blockSize);                writeFileOp.AddRange(currentFileToWrite); //Data
+            }            byte[] result = currentIsoDept.Transceive(writeFileOp.ToArray());            return result;        }
     }
 }

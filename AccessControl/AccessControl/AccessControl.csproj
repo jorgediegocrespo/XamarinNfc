@@ -22,6 +22,7 @@
     <Folder Include="Features\NfcTests\" />
     <Folder Include="Features\Main\" />
     <Folder Include="Services\EncryptionService\" />
+    <Folder Include="Extensions\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Features\AccessControlView.xaml.cs" />
