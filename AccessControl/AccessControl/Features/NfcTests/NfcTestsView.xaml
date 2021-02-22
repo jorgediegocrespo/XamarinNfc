@@ -1,9 +1,11 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="AccessControl.Features.NfcTestsView">
+             xmlns:ios="clr-namespace:Xamarin.Forms.PlatformConfiguration.iOSSpecific;assembly=Xamarin.Forms.Core"
+             x:Class="AccessControl.Features.NfcTestsView"
+             ios:Page.UseSafeArea="true">
 
-    <StackLayout>
+    <StackLayout HorizontalOptions="FillAndExpand">
         <Frame BackgroundColor="#2196F3" Padding="24" CornerRadius="0" Margin="0,0,0,20">
             <Label Text="Nfc tests" HorizontalTextAlignment="Center" TextColor="White" FontSize="36"/>
         </Frame>
@@ -17,7 +19,9 @@
 
         <Button x:Name="btnClean" Text="Clean NFC" Clicked="btnClean_Clicked" Margin="20,0"/>
 
-        <Label x:Name="lbState" Text="Waiting..." HorizontalTextAlignment="Center"/>
+        <Label x:Name="lbState" Text="Waiting..." TextColor="Black" HorizontalOptions="CenterAndExpand" />
+
+        <Button x:Name="btnBack" Text="Back" Clicked="btnBack_Clicked" Margin="20,20" />
     </StackLayout>
 
 </ContentPage>

@@ -21,8 +21,13 @@ namespace AccessControl.Features
             nfcService.OnNfcTagMimeWriten += NfcService_OnNfcTagMimeWriten;
             nfcService.OnNfcTagCleaned += NfcService_OnNfcTagCleaned;
 
-            NavigationPage.SetHasBackButton(this, false);
+            NavigationPage.SetHasNavigationBar(this, false);
             InitializeComponent();
+        }
+
+        public void btnBack_Clicked(System.Object sender, System.EventArgs e)
+        {
+            OnBackButtonPressed();
         }
 
         protected override bool OnBackButtonPressed()
@@ -62,8 +67,14 @@ namespace AccessControl.Features
         {
             nfcService.StopReadingTag();
             btnRead.IsEnabled = true;
-            Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card read");
-            await ShowNfcMessage(e.Records.FirstOrDefault());
+
+            if (e == null)
+                Device.BeginInvokeOnMainThread(() => lbState.Text = "Error reading NFC");
+            else
+            {
+                Device.BeginInvokeOnMainThread(() => lbState.Text = "NFC card read");
+                await ShowNfcMessage(e.Records.FirstOrDefault());
+            }
         }
 
         private async Task ShowNfcMessage(NfcNdefRecord record)
